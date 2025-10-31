@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Analysis Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin: 20px;
+            padding: 30px;
+        }
+        .chart-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .summary-card.compact {
+            padding: 15px 10px;
+            margin: 5px 2px;
+            border-radius: 10px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .summary-card h3 {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .summary-card h4 {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .summary-card p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+        .summary-card small {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            display: block;
+        }
+        .chat-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 15px 0;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .chat-message {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .user-message {
+            background: #007bff;
+            color: white;
+            margin-left: 20%;
+        }
+        .bot-message {
+            background: #e9ecef;
+            color: #333;
+            margin-right: 20%;
+        }
+        .upload-area {
+            border: 3px dashed #007bff;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            margin: 20px 0;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #0056b3;
+            background: #e3f2fd;
+        }
+        .upload-area.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .btn-custom {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        .btn-custom:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            color: white;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner-border {
+            color: #667eea;
+        }
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="main-container">
+            <div class="text-center mb-4">
+                <h1 class="display-4 fw-bold text-primary">
+                    <i class="fas fa-chart-line me-3"></i>Financial Analysis Dashboard
+                </h1>
+                <p class="lead text-muted">Upload your financial data and get comprehensive insights with AI-powered advice</p>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <h4>Upload Your Financial CSV File</h4>
+                        <p class="text-muted">Drag and drop your CSV file here or click to browse</p>
+                        <input type="file" id="fileInput" accept=".csv" style="display: none;">
+                        <button class="btn btn-custom" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open me-2"></i>Choose File
+                        </button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h5>Or try with sample data</h5>
+                        <button class="btn btn-outline-primary btn-lg" onclick="loadSampleData()">
+                            <i class="fas fa-database me-2"></i>Load Sample Data
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Messages -->
+            <div id="alertContainer"></div>
+
+            <!-- Loading Indicator -->
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Analyzing your financial data...</p>
+            </div>
+
+            <!-- Financial Summary Cards -->
+            <div class="row" id="summaryCards" style="display: none;">
+                <!-- Primary Financial Metrics -->
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="totalIncome">₹0</h4>
+                                <small>Annual Income</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="totalExpenses">₹0</h4>
+                                <small>Annual Expenses</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="netIncome">₹0</h4>
+                                <small>Net Income</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="savingsRate">0%</h4>
+                                <small>Savings Rate</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Secondary Financial Metrics -->
+                <div class="col-md-6">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="totalSavings">₹0</h4>
+                                <small>Annual Savings</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="totalInvestments">₹0</h4>
+                                <small>Investments</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="monthsDeficit">0</h4>
+                                <small>Months in Deficit</small>
+                            </div>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <div class="summary-card compact">
+                                <h4 id="largestExpense">-</h4>
+                                <small>Largest Expense</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div id="chartsSection" style="display: none;">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-chart-line me-2"></i>Income Trend</h5>
+                            <div id="incomeChart"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-chart-pie me-2"></i>Expense Breakdown</h5>
+                            <div id="expenseChart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-chart-bar me-2"></i>Monthly Expenses</h5>
+                            <div id="monthlyExpensesChart"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-piggy-bank me-2"></i>Savings & Investments</h5>
+                            <div id="savingsChart"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="chart-container">
+                            <h5><i class="fas fa-balance-scale me-2"></i>Net Income Trend</h5>
+                            <div id="netIncomeChart"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI Chat Section -->
+            <div class="row" id="chatSection" style="display: none;">
+                <div class="col-md-12">
+                    <div class="chat-container">
+                        <h5><i class="fas fa-robot me-2"></i>AI Financial Assistant</h5>
+                        <p class="text-muted">Ask questions about your financial data and get personalized advice</p>
+                        
+                        <div id="chatMessages" style="max-height: 300px; overflow-y: auto;">
+                            <div class="chat-message bot-message">
+                                <strong>AI Assistant:</strong><br>
+                                <h5 style="margin: 10px 0 5px 0; color: #007bff;">🎯 How I Can Help</h5>
+                                <ul style="margin: 5px 0; padding-left: 20px;">
+                                    <li style="margin: 3px 0;">Analyze your spending patterns</li>
+                                    <li style="margin: 3px 0;">Suggest budget improvements</li>
+                                    <li style="margin: 3px 0;">Provide structured financial advice</li>
+                                    <li style="margin: 3px 0;">Help with savings strategies</li>
+                                </ul>
+                                <strong>What would you like to know about your finances?</strong>
+                            </div>
+                        </div>
+                        
+                        <div class="input-group mt-3">
+                            <input type="text" class="form-control" id="chatInput" placeholder="Ask me anything about your finances...">
+                            <button class="btn btn-custom" onclick="sendMessage()">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="mt-3">
+                            <small class="text-muted">Try asking: "How can I improve my savings rate?" or "What's my biggest expense category?"</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentData = null;
+
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            if (!file.name.endsWith('.csv')) {
+                showAlert('Please upload a CSV file.', 'danger');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            showLoading(true);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else {
+                    showAlert('File uploaded successfully! Analyzing data...', 'success');
+                    analyzeData();
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                showAlert('Error uploading file: ' + error.message, 'danger');
+            });
+        }
+
+        function loadSampleData() {
+            showLoading(true);
+            fetch('/load_sample')
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else {
+                    showAlert('Sample data loaded successfully!', 'success');
+                    analyzeData();
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                showAlert('Error loading sample data: ' + error.message, 'danger');
+            });
+        }
+
+        function analyzeData() {
+            showLoading(true);
+            fetch('/analyze')
+            .then(response => response.json())
+            .then(data => {
+                showLoading(false);
+                if (data.error) {
+                    showAlert(data.error, 'danger');
+                } else {
+                    currentData = data;
+                    displaySummary(data.summary);
+                    displayCharts(data);
+                    document.getElementById('chartsSection').style.display = 'block';
+                    document.getElementById('chatSection').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                showLoading(false);
+                showAlert('Error analyzing data: ' + error.message, 'danger');
+            });
+        }
+
+        function displaySummary(summary) {
+            // Format currency values
+            const formatCurrency = (value) => {
+                if (value >= 100000) {
+                    return '₹' + (value / 100000).toFixed(1) + 'L';
+                } else if (value >= 1000) {
+                    return '₹' + (value / 1000).toFixed(0) + 'K';
+                } else {
+                    return '₹' + value.toLocaleString();
+                }
+            };
+            
+            // Primary financial metrics
+            document.getElementById('totalIncome').textContent = formatCurrency(summary.total_income);
+            document.getElementById('totalExpenses').textContent = formatCurrency(summary.total_expenses);
+            
+            // Net income with color coding
+            const netIncomeElement = document.getElementById('netIncome');
+            if (summary.net_income >= 0) {
+                netIncomeElement.textContent = formatCurrency(summary.net_income);
+                netIncomeElement.style.color = '#28a745';
+            } else {
+                netIncomeElement.textContent = formatCurrency(Math.abs(summary.net_income));
+                netIncomeElement.style.color = '#dc3545';
+            }
+            
+            // Savings rate
+            document.getElementById('savingsRate').textContent = summary.savings_rate.toFixed(1) + '%';
+            
+            // Secondary financial metrics
+            document.getElementById('totalSavings').textContent = formatCurrency(summary.total_savings);
+            document.getElementById('totalInvestments').textContent = formatCurrency(summary.total_investments);
+            document.getElementById('monthsDeficit').textContent = summary.months_in_deficit;
+            document.getElementById('largestExpense').textContent = summary.largest_expense_category;
+            
+            // Show cards
+            document.getElementById('summaryCards').style.display = 'block';
+        }
+
+        function displayCharts(data) {
+            // Income Trend Chart
+            Plotly.newPlot('incomeChart', JSON.parse(data.income_trend).data, JSON.parse(data.income_trend).layout);
+
+            // Expense Breakdown Chart
+            Plotly.newPlot('expenseChart', JSON.parse(data.expense_breakdown).data, JSON.parse(data.expense_breakdown).layout);
+
+            // Monthly Expenses Chart
+            Plotly.newPlot('monthlyExpensesChart', JSON.parse(data.monthly_expenses).data, JSON.parse(data.monthly_expenses).layout);
+
+            // Savings Analysis Chart
+            Plotly.newPlot('savingsChart', JSON.parse(data.savings_analysis).data, JSON.parse(data.savings_analysis).layout);
+
+            // Net Income Trend Chart
+            Plotly.newPlot('netIncomeChart', JSON.parse(data.net_income_trend).data, JSON.parse(data.net_income_trend).layout);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Add user message to chat
+            addMessageToChat(message, 'user');
+            input.value = '';
+
+            // Send to AI
+            fetch('/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ question: message })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    addMessageToChat('Sorry, I encountered an error: ' + data.error, 'bot');
+                } else {
+                    addMessageToChat(data.response, 'bot');
+                }
+            })
+            .catch(error => {
+                addMessageToChat('Sorry, I encountered an error: ' + error.message, 'bot');
+            });
+        }
+
+        function addMessageToChat(message, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            
+            const senderName = sender === 'user' ? 'You' : 'AI Assistant';
+            
+            // Format the message to handle markdown-style headers and lists
+            let formattedMessage = message
+                .replace(/## (.*?)/g, '<h5 style="margin: 10px 0 5px 0; color: #007bff;">$1</h5>')
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/- (.*?)(?=\n|$)/g, '<li style="margin: 3px 0;">$1</li>')
+                .replace(/(<li.*?<\/li>)/gs, '<ul style="margin: 5px 0; padding-left: 20px;">$1</ul>')
+                .replace(/\n/g, '<br>');
+            
+            messageDiv.innerHTML = `<strong>${senderName}:</strong><br>${formattedMessage}`;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function showAlert(message, type) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.appendChild(alertDiv);
+            
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 5000);
+        }
+
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+        }
+
+        // Allow sending message with Enter key
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
